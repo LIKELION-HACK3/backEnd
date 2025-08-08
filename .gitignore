@@ -1,0 +1,64 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Django DB & logs
+db.sqlite3
+db.sqlite3-journal
+*.log
+
+# Secret settings
+.env
+.env.*
+
+# Django local settings (if split)
+local_settings.py
+
+# Media and static files (optionally ignored)
+media/
+staticfiles/
+static_root/
+media_root/
+
+# Migrations (optional: ignore if you don't want to commit initial ones)
+**/migrations/*.py
+!**/migrations/__init__.py
+**/migrations/*.pyc
+
+# Python environments
+.myvenv/
+myvenv/
+ENV/
+env/
+env.bak/
+myvenv.bak/
+
+# Unit test / coverage
+htmlcov/
+.coverage
+.tox/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Pipenv / Poetry / Pyright
+Pipfile.lock
+poetry.lock
+pyrightconfig.json
+
+# pyenv
+.python-version
