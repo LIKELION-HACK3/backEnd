@@ -2,6 +2,7 @@ import json
 from typing import List, Dict, Any
 
 from django.db import transaction
+from django.db.models import Q, Count
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +10,104 @@ from rest_framework.views import APIView
 
 from .models import Room, RoomImage, Review
 from .serializers import RoomSerializer, ReviewSerializer
+
+
+class RoomStatsView(APIView):
+    """
+    방 타입별 통계 및 검색 옵션 제공 API
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        # 방 타입별 개수
+        room_type_stats = Room.objects.values('room_type').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        # 전체 방 개수
+        total_rooms = Room.objects.count()
+        
+        # 지역별 방 개수 (구 단위)
+        region_stats = []
+        for room in Room.objects.values('address').distinct():
+            if room['address']:
+                # 주소에서 구 추출 (예: "중랑구 중화동" -> "중랑구")
+                address_parts = room['address'].split()
+                if len(address_parts) > 0:
+                    region = address_parts[0]
+                    region_stats.append(region)
+        
+        # 구별 개수 집계
+        from collections import Counter
+        region_counts = Counter(region_stats)
+        region_stats = [{'region': region, 'count': count} for region, count in region_counts.most_common()]
+        
+        return Response({
+            'total_rooms': total_rooms,
+            'room_type_stats': list(room_type_stats),
+            'region_stats': region_stats,
+            'search_options': {
+                'room_types': [item['room_type'] for item in room_type_stats if item['room_type']],
+                'regions': [item['region'] for item in region_stats]
+            }
+        })
+
+
+class RoomSearchView(APIView):
+    """
+    피그마 디자인에 맞는 방 검색 API
+    - 지역명, 지하철역, 단지명으로 검색
+    - 방 타입별 필터링
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        # 검색 파라미터
+        search_query = request.query_params.get('q', '').strip()  # 검색어
+        room_type = request.query_params.get('room_type', '').strip()  # 방 타입
+        
+        # 기본 쿼리셋
+        queryset = Room.objects.all().prefetch_related('images')
+        
+        # 검색어가 있는 경우: 제목, 주소에서 검색
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |  # 제목에서 검색
+                Q(address__icontains=search_query)   # 주소에서 검색
+            )
+        
+        # 방 타입 필터링
+        if room_type:
+            queryset = queryset.filter(room_type=room_type)
+        
+        # 검색 결과 정렬 (최신순)
+        queryset = queryset.order_by('-id')
+        
+        # 페이지네이션 (선택사항)
+        page_size = int(request.query_params.get('page_size', 20))
+        page = int(request.query_params.get('page', 1))
+        
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        rooms = queryset[start:end]
+        total_count = queryset.count()
+        
+        # 시리얼라이징
+        serialized_rooms = RoomSerializer(rooms, many=True).data
+        
+        return Response({
+            'rooms': serialized_rooms,
+            'total_count': total_count,
+            'page': page,
+            'page_size': page_size,
+            'search_query': search_query,
+            'room_type': room_type,
+            'filters_applied': {
+                'search_query': bool(search_query),
+                'room_type': bool(room_type)
+            }
+        })
 
 
 class RoomListCreateView(generics.ListCreateAPIView):
