@@ -25,9 +25,7 @@ staticfiles/
 static_root/
 media_root/
 
-# Migrations (optional: ignore if you don't want to commit initial ones)
-**/migrations/*.py
-!**/migrations/__init__.py
+# Migrations (commit migration files)
 **/migrations/*.pyc
 
 # Python environments
