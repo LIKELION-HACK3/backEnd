@@ -30,9 +30,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+# Comma-separated list, e.g. ".cloudtype.app,localhost,127.0.0.1"
+_allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '').strip()
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else []
 
 
 # Application definition
@@ -57,6 +59,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -132,6 +135,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -159,9 +164,23 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-# CORS 설정 (개발용)
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+# CSRF / CORS / Proxy 설정
+# 신뢰할 수 있는 도메인은 환경변수로 제어 (예: https://*.cloudtype.app)
+_csrf_trusted_origins_env = os.getenv('CSRF_TRUSTED_ORIGINS', '').strip()
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted_origins_env.split(',') if o.strip()] if _csrf_trusted_origins_env else []
+
+# 기본값은 개발 편의를 위해 모두 허용. 운영에서는 환경변수로 제한 권장
+if os.getenv('CORS_ALLOW_ALL', 'True').lower() == 'true':
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
+else:
+    _cors_allowed_origins_env = os.getenv('CORS_ALLOWED_ORIGINS', '').strip()
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_allowed_origins_env.split(',') if o.strip()]
+    CORS_ALLOW_CREDENTIALS = True
+
+# Reverse proxy (Cloudtype) 환경에서 HTTPS 인식
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 # 커스텀 User 모델 설정
 AUTH_USER_MODEL = 'users.User'
