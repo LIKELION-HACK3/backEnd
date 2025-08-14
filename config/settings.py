@@ -15,6 +15,12 @@ from pathlib import Path
 import os 
 from dotenv import load_dotenv
 from datetime import timedelta
+try:
+    import pymysql  # MySQL 드라이버 (mysqlclient 대체)
+    pymysql.install_as_MySQLdb()
+except Exception:
+    # 로컬에서 PyMySQL 미설치 상태일 수 있으므로 조용히 통과
+    pass
 
 #.env 파일 로드
 load_dotenv()
@@ -92,12 +98,30 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
+
+if DB_ENGINE == 'mysql':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME', ''),
+            'USER': os.getenv('DB_USER', ''),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', ''),
+            'PORT': os.getenv('DB_PORT', '3306'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
