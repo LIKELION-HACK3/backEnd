@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'drf_spectacular',  # Swagger 문서 생성
     'users',
     'rooms',
     'bookmarks',
@@ -181,6 +182,7 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # JWT 설정
@@ -211,3 +213,24 @@ USE_X_FORWARDED_HOST = True
 
 # 커스텀 User 모델 설정
 AUTH_USER_MODEL = 'users.User'
+
+# Swagger/OpenAPI 설정
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'UniRoom API',
+    'DESCRIPTION': '부동산 매물 비교 및 AI 분석 API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+    },
+    'TAGS': [
+        {'name': 'users', 'description': '사용자 인증 및 관리'},
+        {'name': 'rooms', 'description': '방 매물 관리 및 검색'},
+        {'name': 'ai', 'description': 'AI 방 비교 분석'},
+        {'name': 'bookmarks', 'description': '북마크 관리'},
+        {'name': 'community', 'description': '커뮤니티 기능'},
+    ],
+}

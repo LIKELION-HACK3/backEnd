@@ -54,3 +54,47 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_at", "user")
 
 
+# -------- Swagger 응답 전용 Serializer들 --------
+class _RoomTypeStatSerializer(serializers.Serializer):
+    room_type = serializers.CharField(allow_null=True, required=False)
+    count = serializers.IntegerField()
+
+
+class _RegionStatSerializer(serializers.Serializer):
+    region = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class _SearchOptionsSerializer(serializers.Serializer):
+    room_types = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+    regions = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+
+
+class RoomStatsResponseSerializer(serializers.Serializer):
+    total_rooms = serializers.IntegerField()
+    room_type_stats = _RoomTypeStatSerializer(many=True)
+    region_stats = _RegionStatSerializer(many=True)
+    search_options = _SearchOptionsSerializer()
+
+
+class _FiltersAppliedSerializer(serializers.Serializer):
+    search_query = serializers.BooleanField()
+    room_type = serializers.BooleanField()
+
+
+class RoomSearchResponseSerializer(serializers.Serializer):
+    rooms = RoomSerializer(many=True)
+    total_count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    search_query = serializers.CharField(allow_blank=True)
+    room_type = serializers.CharField(allow_blank=True)
+    filters_applied = _FiltersAppliedSerializer()
+
+
+class ImportRoomsResponseSerializer(serializers.Serializer):
+    created = serializers.IntegerField()
+    updated = serializers.IntegerField()
+    rooms = RoomSerializer(many=True)
+
+

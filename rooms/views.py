@@ -7,11 +7,43 @@ from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from .models import Room, RoomImage, Review
-from .serializers import RoomSerializer, ReviewSerializer
+from .serializers import RoomSerializer, ReviewSerializer, RoomStatsResponseSerializer, RoomSearchResponseSerializer, ImportRoomsResponseSerializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 
-
+@extend_schema(
+    tags=['rooms'],
+    summary='방 통계 및 검색 옵션',
+    description='방 타입별 통계, 지역별 통계, 검색 옵션을 제공합니다.',
+    responses={
+        200: OpenApiResponse(
+            response=RoomStatsResponseSerializer,
+            description='통계 정보',
+            examples=[
+                OpenApiExample(
+                    '통계 예시',
+                    value={
+                        'total_rooms': 150,
+                        'room_type_stats': [
+                            {'room_type': '원룸', 'count': 80},
+                            {'room_type': '투룸', 'count': 70}
+                        ],
+                        'region_stats': [
+                            {'region': '강남구', 'count': 30},
+                            {'region': '마포구', 'count': 25}
+                        ],
+                        'search_options': {
+                            'room_types': ['원룸', '투룸'],
+                            'regions': ['강남구', '마포구']
+                        }
+                    },
+                    response_only=True,
+                    status_codes=['200']
+                )
+            ]
+        )
+    }
+)
 class RoomStatsView(APIView):
     """
     방 타입별 통계 및 검색 옵션 제공 API
@@ -53,6 +85,60 @@ class RoomStatsView(APIView):
         })
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 검색',
+    description='지역명, 지하철역, 단지명으로 방을 검색하고 방 타입별로 필터링합니다.',
+    parameters=[
+        OpenApiParameter(name='q', description='검색어', required=False, type=str),
+        OpenApiParameter(name='room_type', description='방 타입', required=False, type=str),
+        OpenApiParameter(name='page', description='페이지 번호', required=False, type=int, default=1),
+        OpenApiParameter(name='page_size', description='페이지 크기', required=False, type=int, default=20),
+    ],
+    examples=[
+        OpenApiExample(
+            '검색 예시',
+            value={
+                'q': '강남',
+                'room_type': '원룸',
+                'page': 1,
+                'page_size': 20
+            },
+            request_only=True,
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=RoomSearchResponseSerializer,
+            description='검색 결과',
+            examples=[
+                OpenApiExample(
+                    '검색 결과 예시',
+                    value={
+                        'rooms': [
+                            {
+                                'id': 1,
+                                'title': '강남 원룸',
+                                'room_type': '원룸',
+                                'monthly_fee': 500000,
+                                'address': '강남구',
+                                'images': []
+                            }
+                        ],
+                        'total_count': 1,
+                        'page': 1,
+                        'page_size': 20,
+                        'search_query': '강남',
+                        'room_type': '원룸',
+                        'filters_applied': {'search_query': True, 'room_type': True}
+                    },
+                    response_only=True,
+                    status_codes=['200']
+                )
+            ]
+        )
+    }
+)
 class RoomSearchView(APIView):
     """
     피그마 디자인에 맞는 방 검색 API
@@ -110,18 +196,219 @@ class RoomSearchView(APIView):
         })
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 목록 조회 및 생성',
+    description='모든 방 목록을 조회하거나 새로운 방을 생성합니다.',
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'title': {
+                    'type': 'string',
+                    'description': '방 제목',
+                    'example': '강남 원룸'
+                },
+                'room_type': {
+                    'type': 'string',
+                    'description': '방 타입',
+                    'example': '원룸',
+                    'enum': ['원룸', '투룸', '쓰리룸', '오피스텔', '아파트']
+                },
+                'deposit': {
+                    'type': 'integer',
+                    'description': '보증금 (원)',
+                    'example': 1000000
+                },
+                'monthly_fee': {
+                    'type': 'integer',
+                    'description': '월세 (원)',
+                    'example': 500000
+                },
+                'maintenance_cost': {
+                    'type': 'integer',
+                    'description': '관리비 (원)',
+                    'example': 50000
+                },
+                'supply_area': {
+                    'type': 'number',
+                    'description': '공급면적 (㎡)',
+                    'example': 25.5
+                },
+                'real_area': {
+                    'type': 'number',
+                    'description': '전용면적 (㎡)',
+                    'example': 20.3
+                },
+                'floor': {
+                    'type': 'string',
+                    'description': '층수',
+                    'example': '3층'
+                },
+                'contract_type': {
+                    'type': 'string',
+                    'description': '계약형태',
+                    'example': '월세',
+                    'enum': ['월세', '전세', '반전세']
+                },
+                'address': {
+                    'type': 'string',
+                    'description': '주소',
+                    'example': '강남구 역삼동'
+                },
+                'latitude': {
+                    'type': 'number',
+                    'description': '위도',
+                    'example': 37.5665
+                },
+                'longitude': {
+                    'type': 'number',
+                    'description': '경도',
+                    'example': 126.9780
+                }
+            },
+            'required': ['title', 'room_type', 'monthly_fee', 'address']
+        }
+    },
+    responses={
+        200: {
+            'description': '방 목록 조회 성공',
+            'examples': [
+                {
+                    'count': 2,
+                    'next': None,
+                    'previous': None,
+                    'results': [
+                        {
+                            'id': 1,
+                            'title': '강남 원룸',
+                            'room_type': '원룸',
+                            'monthly_fee': 500000,
+                            'address': '강남구'
+                        }
+                    ]
+                }
+            ]
+        },
+        201: {
+            'description': '방 생성 성공',
+            'examples': [
+                {
+                    'id': 1,
+                    'title': '강남 원룸',
+                    'room_type': '원룸',
+                    'monthly_fee': 500000,
+                    'address': '강남구'
+                }
+            ]
+        },
+        400: '잘못된 요청 데이터'
+    }
+)
 class RoomListCreateView(generics.ListCreateAPIView):
     queryset = Room.objects.all().prefetch_related('images')
     serializer_class = RoomSerializer
     permission_classes = [AllowAny]
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 상세 조회, 수정, 삭제',
+    description='특정 방의 상세 정보를 조회, 수정, 삭제합니다.',
+    parameters=[
+        OpenApiParameter(name='pk', description='방 ID', required=True, type=int),
+    ],
+    responses={
+        200: RoomSerializer,
+        404: '방을 찾을 수 없습니다',
+    }
+)
 class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Room.objects.all().prefetch_related('images')
     serializer_class = RoomSerializer
     permission_classes = [AllowAny]
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 데이터 대량 임포트',
+    description='JSON 파일이나 데이터를 통해 방 정보를 대량으로 임포트합니다. real-estate.json의 한글 키를 그대로 지원합니다.',
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'file': {
+                    'type': 'string',
+                    'format': 'binary',
+                    'description': 'real-estate.json 형식의 JSON 파일 업로드'
+                }
+            }
+        },
+        'application/json': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    '매물ID': {'type': 'integer', 'description': '외부 매물 식별자', 'example': 17851114},
+                    '제목': {'type': 'string', 'example': '중화역3분 근저당X 초저가 지상층 풀옵션 원룸'},
+                    '방종류': {'type': 'string', 'example': '원룸'},
+                    '월세': {'type': 'integer', 'example': 400000},
+                    '보증금': {'type': 'integer', 'example': 5000000},
+                    '관리비': {'type': 'integer', 'example': 50000},
+                    '공급면적': {'type': 'number', 'example': 19.84},
+                    '전용면적': {'type': 'number', 'example': 16.53},
+                    '층수': {'type': 'string', 'example': '2층/3층'},
+                    '계약형태': {'type': 'string', 'example': '월세'},
+                    '주소': {'type': 'string', 'example': '중랑구 중화동'},
+                    '위도': {'type': 'number', 'example': 37.6036059},
+                    '경도': {'type': 'number', 'example': 127.0766452},
+                    '이미지URL': {
+                        'type': 'array',
+                        'items': {'type': 'string'},
+                        'description': '이미지 URL 배열',
+                        'example': [
+                            'https://img.peterpanz.com/photo/20250723/17851114/68809f91e5e93_thumb.jpg'
+                        ]
+                    }
+                },
+                'required': ['제목', '방종류', '월세', '주소']
+            },
+            'examples': [
+                {
+                    '매물ID': 17851114,
+                    '제목': '중화역3분 근저당X 초저가 지상층 풀옵션 원룸',
+                    '방종류': '원룸',
+                    '월세': 400000,
+                    '보증금': 5000000,
+                    '관리비': 50000,
+                    '공급면적': 19.84,
+                    '전용면적': 16.53,
+                    '층수': '2층/3층',
+                    '계약형태': '월세',
+                    '주소': '중랑구 중화동',
+                    '위도': 37.6036059,
+                    '경도': 127.0766452,
+                    '이미지URL': ['https://img.peterpanz.com/photo/20250723/17851114/68809f91e5e93_thumb.jpg']
+                }
+            ]
+        }
+    },
+    responses={
+        201: OpenApiResponse(
+            response=ImportRoomsResponseSerializer,
+            description='임포트 결과',
+            examples=[
+                OpenApiExample(
+                    '임포트 성공 예시',
+                    value={'created': 10, 'updated': 5, 'rooms': []},
+                    response_only=True,
+                    status_codes=['201']
+                )
+            ]
+        ),
+        400: OpenApiResponse(description='입력 파싱 오류')
+    }
+)
 class ImportRoomsView(APIView):
     permission_classes = [AllowAny]
 
@@ -207,6 +494,18 @@ class ImportRoomsView(APIView):
         )
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 리뷰 목록 및 생성',
+    description='특정 방의 리뷰를 조회하거나 새로운 리뷰를 생성합니다.',
+    parameters=[
+        OpenApiParameter(name='room_id', description='방 ID', required=True, type=int),
+    ],
+    responses={
+        200: ReviewSerializer(many=True),
+        201: ReviewSerializer,
+    }
+)
 class ReviewListCreateView(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated]
