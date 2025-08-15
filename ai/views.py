@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from .models import AIComparisonReport
 from .serializers import AIComparisonReportSerializer, AIComparisonRequestSerializer
 from rooms.models import Room
-from bookmarks.models import Bookmark
+# from bookmarks.models import Bookmark  # 임시로 주석 처리
 
 class AIComparisonView(APIView):
     """
@@ -253,24 +253,10 @@ class AIComparisonDetailView(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_bookmarked_rooms_for_comparison(request):
-    """북마크된 방들을 비교 분석용으로 조회"""
-    bookmarks = Bookmark.objects.filter(user=request.user).select_related('room')
-    rooms = [bookmark.room for bookmark in bookmarks]
-    
-    # 간단한 방 정보만 반환
-    room_data = []
-    for room in rooms:
-        room_data.append({
-            'id': room.id,
-            'title': room.title,
-            'room_type': room.room_type,
-            'monthly_fee': room.monthly_fee,
-            'deposit': room.deposit,
-            'address': room.address,
-            'supply_area': room.supply_area
-        })
-    
+    """북마크된 방들을 비교 분석용으로 조회 (임시로 비활성화)"""
+    # Bookmark 모델이 없어서 임시로 빈 응답
     return Response({
-        'bookmarked_rooms': room_data,
-        'total_count': len(room_data)
+        'bookmarked_rooms': [],
+        'total_count': 0,
+        'message': '북마크 기능이 아직 구현되지 않았습니다.'
     })
