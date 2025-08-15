@@ -180,9 +180,109 @@ class RoomSearchView(APIView):
     tags=['rooms'],
     summary='방 목록 조회 및 생성',
     description='모든 방 목록을 조회하거나 새로운 방을 생성합니다.',
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'title': {
+                    'type': 'string',
+                    'description': '방 제목',
+                    'example': '강남 원룸'
+                },
+                'room_type': {
+                    'type': 'string',
+                    'description': '방 타입',
+                    'example': '원룸',
+                    'enum': ['원룸', '투룸', '쓰리룸', '오피스텔', '아파트']
+                },
+                'deposit': {
+                    'type': 'integer',
+                    'description': '보증금 (원)',
+                    'example': 1000000
+                },
+                'monthly_fee': {
+                    'type': 'integer',
+                    'description': '월세 (원)',
+                    'example': 500000
+                },
+                'maintenance_cost': {
+                    'type': 'integer',
+                    'description': '관리비 (원)',
+                    'example': 50000
+                },
+                'supply_area': {
+                    'type': 'number',
+                    'description': '공급면적 (㎡)',
+                    'example': 25.5
+                },
+                'real_area': {
+                    'type': 'number',
+                    'description': '전용면적 (㎡)',
+                    'example': 20.3
+                },
+                'floor': {
+                    'type': 'string',
+                    'description': '층수',
+                    'example': '3층'
+                },
+                'contract_type': {
+                    'type': 'string',
+                    'description': '계약형태',
+                    'example': '월세',
+                    'enum': ['월세', '전세', '반전세']
+                },
+                'address': {
+                    'type': 'string',
+                    'description': '주소',
+                    'example': '강남구 역삼동'
+                },
+                'latitude': {
+                    'type': 'number',
+                    'description': '위도',
+                    'example': 37.5665
+                },
+                'longitude': {
+                    'type': 'number',
+                    'description': '경도',
+                    'example': 126.9780
+                }
+            },
+            'required': ['title', 'room_type', 'monthly_fee', 'address']
+        }
+    },
     responses={
-        200: RoomSerializer(many=True),
-        201: RoomSerializer,
+        200: {
+            'description': '방 목록 조회 성공',
+            'examples': [
+                {
+                    'count': 2,
+                    'next': None,
+                    'previous': None,
+                    'results': [
+                        {
+                            'id': 1,
+                            'title': '강남 원룸',
+                            'room_type': '원룸',
+                            'monthly_fee': 500000,
+                            'address': '강남구'
+                        }
+                    ]
+                }
+            ]
+        },
+        201: {
+            'description': '방 생성 성공',
+            'examples': [
+                {
+                    'id': 1,
+                    'title': '강남 원룸',
+                    'room_type': '원룸',
+                    'monthly_fee': 500000,
+                    'address': '강남구'
+                }
+            ]
+        },
+        400: '잘못된 요청 데이터'
     }
 )
 class RoomListCreateView(generics.ListCreateAPIView):
