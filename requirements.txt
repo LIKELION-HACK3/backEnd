@@ -7,3 +7,4 @@ python-dotenv==1.0.1
 sqlparse==0.5.3
 typing-extensions==4.13.2
 tzdata==2025.2
+Pillow==10.4.0
