@@ -412,71 +412,80 @@ class AIComparisonView(APIView):
     summary='AI 비교 분석 히스토리',
     description='사용자의 AI 비교 분석 히스토리를 조회합니다.',
     responses={
-        200: {
-            'description': 'AI 비교 분석 히스토리',
-            'examples': [
-                [
-                    {
-                        'id': 1,
-                        'room_a': {
+        200: OpenApiResponse(
+            response=AIComparisonReportSerializer(many=True),
+            description='AI 비교 분석 히스토리',
+            examples=[
+                OpenApiExample(
+                    '히스토리 예시',
+                    value=[
+                        {
                             'id': 1,
-                            'title': '강남 원룸',
-                            'room_type': '원룸',
-                            'monthly_fee': 500000,
-                            'address': '강남구 역삼동'
+                            'room_a': {
+                                'id': 1,
+                                'title': '강남 원룸',
+                                'room_type': '원룸',
+                                'monthly_fee': 500000,
+                                'address': '강남구 역삼동'
+                            },
+                            'room_b': {
+                                'id': 2,
+                                'title': '마포 투룸',
+                                'room_type': '투룸',
+                                'monthly_fee': 700000,
+                                'address': '마포구 합정동'
+                            },
+                            'comparison_criteria': {
+                                'price_weight': 0.4,
+                                'location_weight': 0.3,
+                                'area_weight': 0.3
+                            },
+                            'analysis_summary': '강남 원룸이 가격 대비 효율성이 높습니다.',
+                            'recommendation': 'room_a',
+                            'created_at': '2025-08-15T10:30:00Z'
                         },
-                        'room_b': {
+                        {
                             'id': 2,
-                            'title': '마포 투룸',
-                            'room_type': '투룸',
-                            'monthly_fee': 700000,
-                            'address': '마포구 합정동'
-                        },
-                        'comparison_criteria': {
-                            'price_weight': 0.4,
-                            'location_weight': 0.3,
-                            'area_weight': 0.3
-                        },
-                        'analysis_summary': '강남 원룸이 가격 대비 효율성이 높습니다.',
-                        'recommendation': 'room_a',
-                        'created_at': '2025-08-15T10:30:00Z'
-                    },
-                    {
-                        'id': 2,
-                        'room_a': {
-                            'id': 3,
-                            'title': '홍대 원룸',
-                            'room_type': '원룸',
-                            'monthly_fee': 450000,
-                            'address': '마포구 홍대입구'
-                        },
-                        'room_b': {
-                            'id': 4,
-                            'title': '신촌 투룸',
-                            'room_type': '투룸',
-                            'monthly_fee': 650000,
-                            'address': '서대문구 신촌동'
-                        },
-                        'comparison_criteria': {
-                            'price_weight': 0.6,
-                            'location_weight': 0.2,
-                            'area_weight': 0.2
-                        },
-                        'analysis_summary': '홍대 원룸이 월세가 가장 낮습니다.',
-                        'recommendation': 'room_a',
-                        'created_at': '2025-08-15T09:15:00Z'
-                    }
-                ]
+                            'room_a': {
+                                'id': 3,
+                                'title': '홍대 원룸',
+                                'room_type': '원룸',
+                                'monthly_fee': 450000,
+                                'address': '마포구 홍대입구'
+                            },
+                            'room_b': {
+                                'id': 4,
+                                'title': '신촌 투룸',
+                                'room_type': '투룸',
+                                'monthly_fee': 650000,
+                                'address': '서대문구 신촌동'
+                            },
+                            'comparison_criteria': {
+                                'price_weight': 0.6,
+                                'location_weight': 0.2,
+                                'area_weight': 0.2
+                            },
+                            'analysis_summary': '홍대 원룸이 월세가 가장 낮습니다.',
+                            'recommendation': 'room_a',
+                            'created_at': '2025-08-15T09:15:00Z'
+                        }
+                    ],
+                    response_only=True,
+                    status_codes=['200']
+                )
             ]
-        },
-        401: {
-            'description': '인증되지 않은 사용자',
-            'examples': [
-                {
-                    'detail': '인증 자격이 제공되지 않았습니다.'
-                }
+        ),
+        401: OpenApiResponse(
+            description='인증되지 않은 사용자',
+            examples=[
+                OpenApiExample(
+                    '인증 실패',
+                    value={'detail': '인증 자격이 제공되지 않았습니다.'},
+                    response_only=True,
+                    status_codes=['401']
+                )
             ]
-        }
+        )
     }
 )
 class AIComparisonHistoryView(APIView):
@@ -496,76 +505,88 @@ class AIComparisonHistoryView(APIView):
         OpenApiParameter(name='report_id', description='리포트 ID', required=True, type=int),
     ],
     responses={
-        200: {
-            'description': 'AI 비교 분석 리포트 상세',
-            'examples': [
-                {
-                    'id': 1,
-                    'room_a': {
+        200: OpenApiResponse(
+            response=AIComparisonReportSerializer,
+            description='AI 비교 분석 리포트 상세',
+            examples=[
+                OpenApiExample(
+                    '상세 예시',
+                    value={
                         'id': 1,
-                        'title': '강남 원룸',
-                        'room_type': '원룸',
-                        'deposit': 1000000,
-                        'monthly_fee': 500000,
-                        'maintenance_cost': 50000,
-                        'supply_area': 25.5,
-                        'real_area': 20.3,
-                        'floor': '3층',
-                        'contract_type': '월세',
-                        'address': '강남구 역삼동',
-                        'latitude': 37.5665,
-                        'longitude': 126.9780
+                        'room_a': {
+                            'id': 1,
+                            'title': '강남 원룸',
+                            'room_type': '원룸',
+                            'deposit': 1000000,
+                            'monthly_fee': 500000,
+                            'maintenance_cost': 50000,
+                            'supply_area': 25.5,
+                            'real_area': 20.3,
+                            'floor': '3층',
+                            'contract_type': '월세',
+                            'address': '강남구 역삼동',
+                            'latitude': 37.5665,
+                            'longitude': 126.9780
+                        },
+                        'room_b': {
+                            'id': 2,
+                            'title': '마포 투룸',
+                            'room_type': '투룸',
+                            'deposit': 1500000,
+                            'monthly_fee': 700000,
+                            'maintenance_cost': 80000,
+                            'supply_area': 35.2,
+                            'real_area': 28.7,
+                            'floor': '5층',
+                            'contract_type': '월세',
+                            'address': '마포구 합정동',
+                            'latitude': 37.5519,
+                            'longitude': 126.9250
+                        },
+                        'comparison_criteria': {
+                            'price_weight': 0.4,
+                            'location_weight': 0.3,
+                            'area_weight': 0.3
+                        },
+                        'analysis_summary': '강남 원룸이 가격 대비 효율성이 높고, 마포 투룸은 면적이 넓지만 월세가 높습니다.',
+                        'detailed_comparison': {
+                            'price_analysis': '강남 원룸이 월세 50만원으로 더 저렴하고, 보증금도 100만원으로 낮음',
+                            'location_analysis': '강남구가 교통편이 더 편리하고, 역삼역까지 도보 5분 거리',
+                            'area_analysis': '마포 투룸이 공급면적 35.2㎡, 전용면적 28.7㎡로 더 넓음',
+                            'cost_efficiency': '강남 원룸이 월세 대비 효율성이 1.2배 높음'
+                        },
+                        'recommendation': 'room_a',
+                        'reasoning': '사용자의 가격 중요도(40%)를 고려할 때, 강남 원룸이 월세가 낮고 교통편도 좋아 더 적합합니다. 또한 보증금도 50만원 낮아 초기 비용도 절약할 수 있습니다.',
+                        'created_at': '2025-08-15T10:30:00Z',
+                        'updated_at': '2025-08-15T10:30:00Z'
                     },
-                    'room_b': {
-                        'id': 2,
-                        'title': '마포 투룸',
-                        'room_type': '투룸',
-                        'deposit': 1500000,
-                        'monthly_fee': 700000,
-                        'maintenance_cost': 80000,
-                        'supply_area': 35.2,
-                        'real_area': 28.7,
-                        'floor': '5층',
-                        'contract_type': '월세',
-                        'address': '마포구 합정동',
-                        'latitude': 37.5519,
-                        'longitude': 126.9250
-                    },
-                    'comparison_criteria': {
-                        'price_weight': 0.4,
-                        'location_weight': 0.3,
-                        'area_weight': 0.3
-                    },
-                    'analysis_summary': '강남 원룸이 가격 대비 효율성이 높고, 마포 투룸은 면적이 넓지만 월세가 높습니다.',
-                    'detailed_comparison': {
-                        'price_analysis': '강남 원룸이 월세 50만원으로 더 저렴하고, 보증금도 100만원으로 낮음',
-                        'location_analysis': '강남구가 교통편이 더 편리하고, 역삼역까지 도보 5분 거리',
-                        'area_analysis': '마포 투룸이 공급면적 35.2㎡, 전용면적 28.7㎡로 더 넓음',
-                        'cost_efficiency': '강남 원룸이 월세 대비 효율성이 1.2배 높음'
-                    },
-                    'recommendation': 'room_a',
-                    'reasoning': '사용자의 가격 중요도(40%)를 고려할 때, 강남 원룸이 월세가 낮고 교통편도 좋아 더 적합합니다. 또한 보증금도 50만원 낮아 초기 비용도 절약할 수 있습니다.',
-                    'created_at': '2025-08-15T10:30:00Z',
-                    'updated_at': '2025-08-15T10:30:00Z'
-                }
+                    response_only=True,
+                    status_codes=['200']
+                )
             ]
-        },
-        404: {
-            'description': '리포트를 찾을 수 없습니다',
-            'examples': [
-                {
-                    'error': '리포트를 찾을 수 없습니다.'
-                }
+        ),
+        404: OpenApiResponse(
+            description='리포트를 찾을 수 없습니다',
+            examples=[
+                OpenApiExample(
+                    '리포트 없음',
+                    value={'error': '리포트를 찾을 수 없습니다.'},
+                    response_only=True,
+                    status_codes=['404']
+                )
             ]
-        },
-        401: {
-            'description': '인증되지 않은 사용자',
-            'examples': [
-                {
-                    'detail': '인증 자격이 제공되지 않았습니다.'
-                }
+        ),
+        401: OpenApiResponse(
+            description='인증되지 않은 사용자',
+            examples=[
+                OpenApiExample(
+                    '인증 실패',
+                    value={'detail': '인증 자격이 제공되지 않았습니다.'},
+                    response_only=True,
+                    status_codes=['401']
+                )
             ]
-        }
+        )
     }
 )
 class AIComparisonDetailView(APIView):

@@ -8,30 +8,40 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Room, RoomImage, Review
-from .serializers import RoomSerializer, ReviewSerializer
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from .serializers import RoomSerializer, ReviewSerializer, RoomStatsResponseSerializer, RoomSearchResponseSerializer, ImportRoomsResponseSerializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 @extend_schema(
     tags=['rooms'],
     summary='방 통계 및 검색 옵션',
     description='방 타입별 통계, 지역별 통계, 검색 옵션을 제공합니다.',
     responses={
-        200: {
-            'description': '통계 정보',
-            'examples': [
-                {
-                    'total_rooms': 150,
-                    'room_type_stats': [
-                        {'room_type': '원룸', 'count': 80},
-                        {'room_type': '투룸', 'count': 70}
-                    ],
-                    'region_stats': [
-                        {'region': '강남구', 'count': 30},
-                        {'region': '마포구', 'count': 25}
-                    ]
-                }
+        200: OpenApiResponse(
+            response=RoomStatsResponseSerializer,
+            description='통계 정보',
+            examples=[
+                OpenApiExample(
+                    '통계 예시',
+                    value={
+                        'total_rooms': 150,
+                        'room_type_stats': [
+                            {'room_type': '원룸', 'count': 80},
+                            {'room_type': '투룸', 'count': 70}
+                        ],
+                        'region_stats': [
+                            {'region': '강남구', 'count': 30},
+                            {'region': '마포구', 'count': 25}
+                        ],
+                        'search_options': {
+                            'room_types': ['원룸', '투룸'],
+                            'regions': ['강남구', '마포구']
+                        }
+                    },
+                    response_only=True,
+                    status_codes=['200']
+                )
             ]
-        }
+        )
     }
 )
 class RoomStatsView(APIView):
@@ -98,25 +108,35 @@ class RoomStatsView(APIView):
         ),
     ],
     responses={
-        200: {
-            'description': '검색 결과',
-            'examples': [
-                {
-                    'rooms': [
-                        {
-                            'id': 1,
-                            'title': '강남 원룸',
-                            'room_type': '원룸',
-                            'monthly_fee': 500000,
-                            'address': '강남구'
-                        }
-                    ],
-                    'total_count': 1,
-                    'page': 1,
-                    'page_size': 20
-                }
+        200: OpenApiResponse(
+            response=RoomSearchResponseSerializer,
+            description='검색 결과',
+            examples=[
+                OpenApiExample(
+                    '검색 결과 예시',
+                    value={
+                        'rooms': [
+                            {
+                                'id': 1,
+                                'title': '강남 원룸',
+                                'room_type': '원룸',
+                                'monthly_fee': 500000,
+                                'address': '강남구',
+                                'images': []
+                            }
+                        ],
+                        'total_count': 1,
+                        'page': 1,
+                        'page_size': 20,
+                        'search_query': '강남',
+                        'room_type': '원룸',
+                        'filters_applied': {'search_query': True, 'room_type': True}
+                    },
+                    response_only=True,
+                    status_codes=['200']
+                )
             ]
-        }
+        )
     }
 )
 class RoomSearchView(APIView):
@@ -374,17 +394,19 @@ class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
         }
     },
     responses={
-        201: {
-            'description': '임포트 결과',
-            'examples': [
-                {
-                    'created': 10,
-                    'updated': 5,
-                    'rooms': []
-                }
+        201: OpenApiResponse(
+            response=ImportRoomsResponseSerializer,
+            description='임포트 결과',
+            examples=[
+                OpenApiExample(
+                    '임포트 성공 예시',
+                    value={'created': 10, 'updated': 5, 'rooms': []},
+                    response_only=True,
+                    status_codes=['201']
+                )
             ]
-        },
-        400: '입력 파싱 오류'
+        ),
+        400: OpenApiResponse(description='입력 파싱 오류')
     }
 )
 class ImportRoomsView(APIView):
