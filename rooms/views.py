@@ -7,11 +7,33 @@ from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from .models import Room, RoomImage, Review
 from .serializers import RoomSerializer, ReviewSerializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 
-
+@extend_schema(
+    tags=['rooms'],
+    summary='방 통계 및 검색 옵션',
+    description='방 타입별 통계, 지역별 통계, 검색 옵션을 제공합니다.',
+    responses={
+        200: {
+            'description': '통계 정보',
+            'examples': [
+                {
+                    'total_rooms': 150,
+                    'room_type_stats': [
+                        {'room_type': '원룸', 'count': 80},
+                        {'room_type': '투룸', 'count': 70}
+                    ],
+                    'region_stats': [
+                        {'region': '강남구', 'count': 30},
+                        {'region': '마포구', 'count': 25}
+                    ]
+                }
+            ]
+        }
+    }
+)
 class RoomStatsView(APIView):
     """
     방 타입별 통계 및 검색 옵션 제공 API
@@ -53,6 +75,50 @@ class RoomStatsView(APIView):
         })
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 검색',
+    description='지역명, 지하철역, 단지명으로 방을 검색하고 방 타입별로 필터링합니다.',
+    parameters=[
+        OpenApiParameter(name='q', description='검색어', required=False, type=str),
+        OpenApiParameter(name='room_type', description='방 타입', required=False, type=str),
+        OpenApiParameter(name='page', description='페이지 번호', required=False, type=int, default=1),
+        OpenApiParameter(name='page_size', description='페이지 크기', required=False, type=int, default=20),
+    ],
+    examples=[
+        OpenApiExample(
+            '검색 예시',
+            value={
+                'q': '강남',
+                'room_type': '원룸',
+                'page': 1,
+                'page_size': 20
+            },
+            request_only=True,
+        ),
+    ],
+    responses={
+        200: {
+            'description': '검색 결과',
+            'examples': [
+                {
+                    'rooms': [
+                        {
+                            'id': 1,
+                            'title': '강남 원룸',
+                            'room_type': '원룸',
+                            'monthly_fee': 500000,
+                            'address': '강남구'
+                        }
+                    ],
+                    'total_count': 1,
+                    'page': 1,
+                    'page_size': 20
+                }
+            ]
+        }
+    }
+)
 class RoomSearchView(APIView):
     """
     피그마 디자인에 맞는 방 검색 API
@@ -110,18 +176,83 @@ class RoomSearchView(APIView):
         })
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 목록 조회 및 생성',
+    description='모든 방 목록을 조회하거나 새로운 방을 생성합니다.',
+    responses={
+        200: RoomSerializer(many=True),
+        201: RoomSerializer,
+    }
+)
 class RoomListCreateView(generics.ListCreateAPIView):
     queryset = Room.objects.all().prefetch_related('images')
     serializer_class = RoomSerializer
     permission_classes = [AllowAny]
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 상세 조회, 수정, 삭제',
+    description='특정 방의 상세 정보를 조회, 수정, 삭제합니다.',
+    parameters=[
+        OpenApiParameter(name='pk', description='방 ID', required=True, type=int),
+    ],
+    responses={
+        200: RoomSerializer,
+        404: '방을 찾을 수 없습니다',
+    }
+)
 class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Room.objects.all().prefetch_related('images')
     serializer_class = RoomSerializer
     permission_classes = [AllowAny]
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 데이터 대량 임포트',
+    description='JSON 파일이나 데이터를 통해 방 정보를 대량으로 임포트합니다.',
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'file': {
+                    'type': 'string',
+                    'format': 'binary',
+                    'description': 'JSON 파일 업로드'
+                }
+            }
+        },
+        'application/json': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    '매물ID': {'type': 'integer'},
+                    '제목': {'type': 'string'},
+                    '방종류': {'type': 'string'},
+                    '월세': {'type': 'integer'},
+                    '보증금': {'type': 'integer'},
+                    '주소': {'type': 'string'}
+                }
+            }
+        }
+    },
+    responses={
+        201: {
+            'description': '임포트 결과',
+            'examples': [
+                {
+                    'created': 10,
+                    'updated': 5,
+                    'rooms': []
+                }
+            ]
+        },
+        400: '입력 파싱 오류'
+    }
+)
 class ImportRoomsView(APIView):
     permission_classes = [AllowAny]
 
@@ -207,6 +338,18 @@ class ImportRoomsView(APIView):
         )
 
 
+@extend_schema(
+    tags=['rooms'],
+    summary='방 리뷰 목록 및 생성',
+    description='특정 방의 리뷰를 조회하거나 새로운 리뷰를 생성합니다.',
+    parameters=[
+        OpenApiParameter(name='room_id', description='방 ID', required=True, type=int),
+    ],
+    responses={
+        200: ReviewSerializer(many=True),
+        201: ReviewSerializer,
+    }
+)
 class ReviewListCreateView(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated]

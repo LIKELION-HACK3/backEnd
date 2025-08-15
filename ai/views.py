@@ -12,7 +12,36 @@ from .models import AIComparisonReport
 from .serializers import AIComparisonReportSerializer, AIComparisonRequestSerializer
 from rooms.models import Room
 # from bookmarks.models import Bookmark  # 임시로 주석 처리
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 
+@extend_schema(
+    tags=['ai'],
+    summary='AI 방 비교 분석',
+    description='AI를 사용하여 두 방을 비교 분석하고 더 나은 선택을 추천합니다.',
+    request=AIComparisonRequestSerializer,
+    responses={
+        201: AIComparisonReportSerializer,
+        400: '잘못된 요청',
+        404: '방을 찾을 수 없습니다',
+        500: 'AI 분석 중 오류가 발생했습니다'
+    },
+    examples=[
+        OpenApiExample(
+            '비교 분석 요청 예시',
+            value={
+                'room_a_id': 1,
+                'room_b_id': 2,
+                'comparison_criteria': {
+                    'price_weight': 0.4,
+                    'location_weight': 0.3,
+                    'area_weight': 0.3
+                },
+                'user_preferences': '가격이 중요하고, 교통편이 좋았으면 좋겠어요'
+            },
+            request_only=True,
+        ),
+    ]
+)
 class AIComparisonView(APIView):
     """
     AI를 사용하여 두 방을 비교 분석하는 API
@@ -226,6 +255,14 @@ class AIComparisonView(APIView):
                 'reasoning': "AI 분석 결과"
             }
 
+@extend_schema(
+    tags=['ai'],
+    summary='AI 비교 분석 히스토리',
+    description='사용자의 AI 비교 분석 히스토리를 조회합니다.',
+    responses={
+        200: AIComparisonReportSerializer(many=True),
+    }
+)
 class AIComparisonHistoryView(APIView):
     """사용자의 AI 비교 분석 히스토리 조회"""
     permission_classes = [IsAuthenticated]
@@ -235,6 +272,18 @@ class AIComparisonHistoryView(APIView):
         serializer = AIComparisonReportSerializer(reports, many=True)
         return Response(serializer.data)
 
+@extend_schema(
+    tags=['ai'],
+    summary='AI 비교 분석 리포트 상세',
+    description='특정 AI 비교 분석 리포트의 상세 정보를 조회합니다.',
+    parameters=[
+        OpenApiParameter(name='report_id', description='리포트 ID', required=True, type=int),
+    ],
+    responses={
+        200: AIComparisonReportSerializer,
+        404: '리포트를 찾을 수 없습니다',
+    }
+)
 class AIComparisonDetailView(APIView):
     """특정 AI 비교 분석 리포트 상세 조회"""
     permission_classes = [IsAuthenticated]
@@ -250,6 +299,23 @@ class AIComparisonDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+@extend_schema(
+    tags=['ai'],
+    summary='북마크된 방들 조회 (비교용)',
+    description='AI 비교 분석을 위해 북마크된 방들을 조회합니다. (임시로 비활성화)',
+    responses={
+        200: {
+            'description': '북마크된 방 목록',
+            'examples': [
+                {
+                    'bookmarked_rooms': [],
+                    'total_count': 0,
+                    'message': '북마크 기능이 아직 구현되지 않았습니다.'
+                }
+            ]
+        }
+    }
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_bookmarked_rooms_for_comparison(request):
