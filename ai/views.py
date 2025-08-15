@@ -12,7 +12,7 @@ from .models import AIComparisonReport
 from .serializers import AIComparisonReportSerializer, AIComparisonRequestSerializer
 from rooms.models import Room
 # from bookmarks.models import Bookmark  # 임시로 주석 처리
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 @extend_schema(
     tags=['ai'],
@@ -82,69 +82,86 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExampl
         }
     },
     responses={
-        201: {
-            'description': 'AI 비교 분석 완료',
-            'examples': [
-                {
-                    'id': 1,
-                    'room_a': {
+        201: OpenApiResponse(
+            response=AIComparisonReportSerializer,
+            description='AI 비교 분석 완료',
+            examples=[
+                OpenApiExample(
+                    '성공 예시',
+                    value={
                         'id': 1,
-                        'title': '강남 원룸',
-                        'room_type': '원룸',
-                        'monthly_fee': 500000,
-                        'address': '강남구 역삼동'
+                        'room_a': {
+                            'id': 1,
+                            'title': '강남 원룸',
+                            'room_type': '원룸',
+                            'monthly_fee': 500000,
+                            'address': '강남구 역삼동'
+                        },
+                        'room_b': {
+                            'id': 2,
+                            'title': '마포 투룸',
+                            'room_type': '투룸',
+                            'monthly_fee': 700000,
+                            'address': '마포구 합정동'
+                        },
+                        'comparison_criteria': {
+                            'price_weight': 0.4,
+                            'location_weight': 0.3,
+                            'area_weight': 0.3
+                        },
+                        'analysis_summary': '강남 원룸이 가격 대비 효율성이 높고, 마포 투룸은 면적이 넓지만 월세가 높습니다.',
+                        'detailed_comparison': {
+                            'price_analysis': '강남 원룸이 월세 50만원으로 더 저렴',
+                            'location_analysis': '강남구가 교통편이 더 편리',
+                            'area_analysis': '마포 투룸이 면적이 더 넓음'
+                        },
+                        'recommendation': 'room_a',
+                        'reasoning': '사용자의 가격 중요도(40%)를 고려할 때, 강남 원룸이 월세가 낮고 교통편도 좋아 더 적합합니다.',
+                        'created_at': '2025-08-15T10:30:00Z',
+                        'updated_at': '2025-08-15T10:30:00Z'
                     },
-                    'room_b': {
-                        'id': 2,
-                        'title': '마포 투룸',
-                        'room_type': '투룸',
-                        'monthly_fee': 700000,
-                        'address': '마포구 합정동'
+                    response_only=True,
+                    status_codes=['201']
+                )
+            ]
+        ),
+        400: OpenApiResponse(
+            description='잘못된 요청',
+            examples=[
+                OpenApiExample(
+                    '유효성 실패',
+                    value={
+                        'room_a_id': ['이 필드는 필수입니다.'],
+                        'room_b_id': ['이 필드는 필수입니다.'],
+                        'non_field_errors': ['같은 방을 비교할 수 없습니다.']
                     },
-                    'comparison_criteria': {
-                        'price_weight': 0.4,
-                        'location_weight': 0.3,
-                        'area_weight': 0.3
-                    },
-                    'analysis_summary': '강남 원룸이 가격 대비 효율성이 높고, 마포 투룸은 면적이 넓지만 월세가 높습니다.',
-                    'detailed_comparison': {
-                        'price_analysis': '강남 원룸이 월세 50만원으로 더 저렴',
-                        'location_analysis': '강남구가 교통편이 더 편리',
-                        'area_analysis': '마포 투룸이 면적이 더 넓음'
-                    },
-                    'recommendation': 'room_a',
-                    'reasoning': '사용자의 가격 중요도(40%)를 고려할 때, 강남 원룸이 월세가 낮고 교통편도 좋아 더 적합합니다.',
-                    'created_at': '2025-08-15T10:30:00Z',
-                    'updated_at': '2025-08-15T10:30:00Z'
-                }
+                    response_only=True,
+                    status_codes=['400']
+                )
             ]
-        },
-        400: {
-            'description': '잘못된 요청',
-            'examples': [
-                {
-                    'room_a_id': ['이 필드는 필수입니다.'],
-                    'room_b_id': ['이 필드는 필수입니다.'],
-                    'non_field_errors': ['같은 방을 비교할 수 없습니다.']
-                }
+        ),
+        404: OpenApiResponse(
+            description='방을 찾을 수 없습니다',
+            examples=[
+                OpenApiExample(
+                    '방 없음',
+                    value={'error': '방을 찾을 수 없습니다.'},
+                    response_only=True,
+                    status_codes=['404']
+                )
             ]
-        },
-        404: {
-            'description': '방을 찾을 수 없습니다',
-            'examples': [
-                {
-                    'error': '방을 찾을 수 없습니다.'
-                }
+        ),
+        500: OpenApiResponse(
+            description='AI 분석 중 오류가 발생했습니다',
+            examples=[
+                OpenApiExample(
+                    '서버 오류',
+                    value={'error': 'AI 분석 중 오류가 발생했습니다: OpenAI API 키가 설정되지 않았습니다.'},
+                    response_only=True,
+                    status_codes=['500']
+                )
             ]
-        },
-        500: {
-            'description': 'AI 분석 중 오류가 발생했습니다',
-            'examples': [
-                {
-                    'error': 'AI 분석 중 오류가 발생했습니다: OpenAI API 키가 설정되지 않았습니다.'
-                }
-            ]
-        }
+        )
     },
     examples=[
         OpenApiExample(

@@ -312,7 +312,7 @@ class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
 @extend_schema(
     tags=['rooms'],
     summary='방 데이터 대량 임포트',
-    description='JSON 파일이나 데이터를 통해 방 정보를 대량으로 임포트합니다.',
+    description='JSON 파일이나 데이터를 통해 방 정보를 대량으로 임포트합니다. real-estate.json의 한글 키를 그대로 지원합니다.',
     request={
         'multipart/form-data': {
             'type': 'object',
@@ -320,7 +320,7 @@ class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
                 'file': {
                     'type': 'string',
                     'format': 'binary',
-                    'description': 'JSON 파일 업로드'
+                    'description': 'real-estate.json 형식의 JSON 파일 업로드'
                 }
             }
         },
@@ -329,14 +329,48 @@ class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
             'items': {
                 'type': 'object',
                 'properties': {
-                    '매물ID': {'type': 'integer'},
-                    '제목': {'type': 'string'},
-                    '방종류': {'type': 'string'},
-                    '월세': {'type': 'integer'},
-                    '보증금': {'type': 'integer'},
-                    '주소': {'type': 'string'}
+                    '매물ID': {'type': 'integer', 'description': '외부 매물 식별자', 'example': 17851114},
+                    '제목': {'type': 'string', 'example': '중화역3분 근저당X 초저가 지상층 풀옵션 원룸'},
+                    '방종류': {'type': 'string', 'example': '원룸'},
+                    '월세': {'type': 'integer', 'example': 400000},
+                    '보증금': {'type': 'integer', 'example': 5000000},
+                    '관리비': {'type': 'integer', 'example': 50000},
+                    '공급면적': {'type': 'number', 'example': 19.84},
+                    '전용면적': {'type': 'number', 'example': 16.53},
+                    '층수': {'type': 'string', 'example': '2층/3층'},
+                    '계약형태': {'type': 'string', 'example': '월세'},
+                    '주소': {'type': 'string', 'example': '중랑구 중화동'},
+                    '위도': {'type': 'number', 'example': 37.6036059},
+                    '경도': {'type': 'number', 'example': 127.0766452},
+                    '이미지URL': {
+                        'type': 'array',
+                        'items': {'type': 'string'},
+                        'description': '이미지 URL 배열',
+                        'example': [
+                            'https://img.peterpanz.com/photo/20250723/17851114/68809f91e5e93_thumb.jpg'
+                        ]
+                    }
+                },
+                'required': ['제목', '방종류', '월세', '주소']
+            },
+            'examples': [
+                {
+                    '매물ID': 17851114,
+                    '제목': '중화역3분 근저당X 초저가 지상층 풀옵션 원룸',
+                    '방종류': '원룸',
+                    '월세': 400000,
+                    '보증금': 5000000,
+                    '관리비': 50000,
+                    '공급면적': 19.84,
+                    '전용면적': 16.53,
+                    '층수': '2층/3층',
+                    '계약형태': '월세',
+                    '주소': '중랑구 중화동',
+                    '위도': 37.6036059,
+                    '경도': 127.0766452,
+                    '이미지URL': ['https://img.peterpanz.com/photo/20250723/17851114/68809f91e5e93_thumb.jpg']
                 }
-            }
+            ]
         }
     },
     responses={
