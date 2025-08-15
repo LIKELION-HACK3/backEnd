@@ -271,37 +271,14 @@ class RoomSearchView(APIView):
         }
     },
     responses={
-        200: {
-            'description': '방 목록 조회 성공',
-            'examples': [
-                {
-                    'count': 2,
-                    'next': None,
-                    'previous': None,
-                    'results': [
-                        {
-                            'id': 1,
-                            'title': '강남 원룸',
-                            'room_type': '원룸',
-                            'monthly_fee': 500000,
-                            'address': '강남구'
-                        }
-                    ]
-                }
-            ]
-        },
-        201: {
-            'description': '방 생성 성공',
-            'examples': [
-                {
-                    'id': 1,
-                    'title': '강남 원룸',
-                    'room_type': '원룸',
-                    'monthly_fee': 500000,
-                    'address': '강남구'
-                }
-            ]
-        },
+        200: OpenApiResponse(
+            response=RoomSerializer(many=True),
+            description='방 목록 조회 성공',
+        ),
+        201: OpenApiResponse(
+            response=RoomSerializer,
+            description='방 생성 성공',
+        ),
         400: '잘못된 요청 데이터'
     }
 )
