@@ -25,7 +25,7 @@ urlpatterns = [
     path('api/rooms/', include('rooms.urls')),
     path('api/bookmarks/', include('bookmarks.urls')),
     path('api/ai/', include('ai.urls')),
-    path('api/community/', include('community.urls')),
+    # path('api/community/', include('community.urls')),  # 임시로 비활성화 (팀원 파트)
     
     # Swagger/OpenAPI 문서
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
