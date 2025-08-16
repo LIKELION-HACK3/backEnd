@@ -44,9 +44,6 @@ class BookmarkListView(generics.ListAPIView):
   tags=['bookmarks'],
   summary='북마크 토글',
   description='지정한 방을 북마크에 추가하거나 제거합니다.',
-  parameters=[
-    OpenApiParameter(name='room_id', description='방 ID', required=True, type=int),
-  ],
   responses={
     201: OpenApiResponse(
       description='북마크 추가됨',
