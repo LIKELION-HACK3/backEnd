@@ -1,6 +1,9 @@
 from django.urls import path
-from . import views
+from .views import BookmarkListView, BookmarkToggleView
+
+app_name="bookmarks"
 
 urlpatterns = [
-    # 나중에 뷰를 만들면 여기에 추가
+    path("", BookmarkListView.as_view(), name="bookmark-list"),
+    path("<int:room_id>/toggle/", BookmarkToggleView.as_view(), name="bookmark-toggle"),
 ]

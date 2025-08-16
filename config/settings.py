@@ -60,7 +60,7 @@ INSTALLED_APPS = [
     'rooms',
     'bookmarks',
     'ai',
-    'community',
+    # 'community',  # 임시로 비활성화 (팀원 파트)
 ]
 
 MIDDLEWARE = [
