@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Room, RoomImage, Review
-from .serializers import RoomSerializer, ReviewSerializer, RoomStatsResponseSerializer, RoomSearchResponseSerializer, ImportRoomsResponseSerializer
+from .serializers import RoomSerializer, ReviewSerializer, RoomStatsResponseSerializer, RoomSearchResponseSerializer, ImportRoomsResponseSerializer, RoomRatingStatsResponseSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 @extend_schema(
@@ -478,6 +478,20 @@ class ImportRoomsView(APIView):
     parameters=[
         OpenApiParameter(name='room_id', description='방 ID', required=True, type=int),
     ],
+    examples=[
+        OpenApiExample(
+            '리뷰 생성 요청 예시',
+            value={
+                'rating_safety': 4,
+                'rating_noise': 3,
+                'rating_light': 5,
+                'rating_traffic': 4,
+                'rating_bug': 5,  # 벌레(내부 필드 rating_clean)
+                'content': '채광 좋고 벌레 거의 없어요.'
+            },
+            request_only=True,
+        )
+    ],
     responses={
         200: ReviewSerializer(many=True),
         201: ReviewSerializer,
@@ -494,3 +508,99 @@ class ReviewListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         room_id = self.kwargs.get('room_id')
         serializer.save(user=self.request.user, room_id=room_id)
+
+
+@extend_schema(
+    tags=['rooms'],
+    summary='방 리뷰 별점 통계',
+    description='특정 방의 카테고리별 평균/분포 및 전체 평균을 제공합니다. 피그마 카테고리(채광/방음/벌레/보안/교통)에 맞춰 반환합니다.',
+    parameters=[
+        OpenApiParameter(name='room_id', description='방 ID', required=True, type=int),
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=RoomRatingStatsResponseSerializer,
+            description='별점 통계',
+            examples=[
+                OpenApiExample(
+                    '별점 통계 예시',
+                    value={
+                        'reviews_count': 7,
+                        'averages': {
+                            'safety': 3.9,
+                            'noise': 2.7,
+                            'light': 4.1,
+                            'traffic': 3.3,
+                            'bug': 4.8,
+                            'overall': 3.7
+                        },
+                        'distributions': {
+                            'safety': {'_1': 0, '_2': 1, '_3': 2, '_4': 3, '_5': 1},
+                            'noise': {'_1': 2, '_2': 1, '_3': 2, '_4': 1, '_5': 1},
+                            'light': {'_1': 0, '_2': 0, '_3': 2, '_4': 3, '_5': 2},
+                            'traffic': {'_1': 1, '_2': 1, '_3': 3, '_4': 1, '_5': 1},
+                            'bug': {'_1': 0, '_2': 0, '_3': 1, '_4': 1, '_5': 5}
+                        }
+                    },
+                    response_only=True,
+                    status_codes=['200']
+                )
+            ]
+        )
+    }
+)
+class RoomRatingStatsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, room_id: int):
+        qs = Review.objects.filter(room_id=room_id)
+
+        def avg_or_none(values):
+            values = [v for v in values if v is not None]
+            if not values:
+                return None
+            return round(sum(values) / len(values), 2)
+
+        def dist(values):
+            base = {str(i): 0 for i in range(1, 6)}
+            for v in values:
+                if v in (1, 2, 3, 4, 5):
+                    base[str(v)] += 1
+            return base
+
+        ratings = list(qs.values('rating_safety', 'rating_noise', 'rating_light', 'rating_traffic', 'rating_clean'))
+
+        safety_vals = [r['rating_safety'] for r in ratings]
+        noise_vals = [r['rating_noise'] for r in ratings]
+        light_vals = [r['rating_light'] for r in ratings]
+        traffic_vals = [r['rating_traffic'] for r in ratings]
+        bug_vals = [r['rating_clean'] for r in ratings]  # 내부 필드명을 벌레로 매핑
+
+        # 각 리뷰별 overall 계산(채워진 항목 평균)
+        overall_vals = []
+        for r in ratings:
+            filled = [v for v in (r['rating_safety'], r['rating_noise'], r['rating_light'], r['rating_traffic'], r['rating_clean']) if v is not None]
+            if filled:
+                overall_vals.append(round(sum(filled) / len(filled)))
+
+        data = {
+            'reviews_count': qs.count(),
+            'averages': {
+                'safety': avg_or_none(safety_vals),
+                'noise': avg_or_none(noise_vals),
+                'light': avg_or_none(light_vals),
+                'traffic': avg_or_none(traffic_vals),
+                'bug': avg_or_none(bug_vals),
+                'overall': avg_or_none(overall_vals),
+            },
+            'distributions': {
+                'safety': dist(safety_vals),
+                'noise': dist(noise_vals),
+                'light': dist(light_vals),
+                'traffic': dist(traffic_vals),
+                'bug': dist(bug_vals),
+            }
+        }
+
+        serializer = RoomRatingStatsResponseSerializer(data)
+        return Response(serializer.data)

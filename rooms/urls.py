@@ -6,6 +6,7 @@ from .views import (
     ReviewListCreateView,
     RoomSearchView,
     RoomStatsView,
+    RoomRatingStatsView,
 )
 
 urlpatterns = [
@@ -15,4 +16,5 @@ urlpatterns = [
     path('<int:pk>/', RoomDetailView.as_view(), name='room-detail'),
     path('import/', ImportRoomsView.as_view(), name='room-import'),
     path('<int:room_id>/reviews/', ReviewListCreateView.as_view(), name='review-list-create'),
+    path('<int:room_id>/reviews/stats/', RoomRatingStatsView.as_view(), name='review-stats'),
 ]
