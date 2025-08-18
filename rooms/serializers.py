@@ -36,6 +36,8 @@ class RoomSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
+    # 피그마 카테고리(벌레)와 내부 필드(rating_clean) 매핑
+    rating_bug = serializers.IntegerField(source='rating_clean', required=False, allow_null=True)
 
     class Meta:
         model = Review
@@ -47,7 +49,9 @@ class ReviewSerializer(serializers.ModelSerializer):
             "rating_noise",
             "rating_light",
             "rating_traffic",
+            # 내부 호환을 위해 rating_clean도 유지하되, 외부에서는 rating_bug 사용 가능
             "rating_clean",
+            "rating_bug",
             "content",
             "created_at",
         )
@@ -96,5 +100,38 @@ class ImportRoomsResponseSerializer(serializers.Serializer):
     created = serializers.IntegerField()
     updated = serializers.IntegerField()
     rooms = RoomSerializer(many=True)
+
+
+# ----- 리뷰 평점 통계 응답 -----
+class _CategoryAveragesSerializer(serializers.Serializer):
+    safety = serializers.FloatField(allow_null=True)
+    noise = serializers.FloatField(allow_null=True)
+    light = serializers.FloatField(allow_null=True)
+    traffic = serializers.FloatField(allow_null=True)
+    bug = serializers.FloatField(allow_null=True)
+    overall = serializers.FloatField(allow_null=True)
+
+
+class _StarDistributionSerializer(serializers.Serializer):
+    # 1~5점 분포. 키는 문자열 유지(프론트 정렬 편의)
+    _1 = serializers.IntegerField(source='1')
+    _2 = serializers.IntegerField(source='2')
+    _3 = serializers.IntegerField(source='3')
+    _4 = serializers.IntegerField(source='4')
+    _5 = serializers.IntegerField(source='5')
+
+
+class _CategoryDistributionsSerializer(serializers.Serializer):
+    safety = _StarDistributionSerializer()
+    noise = _StarDistributionSerializer()
+    light = _StarDistributionSerializer()
+    traffic = _StarDistributionSerializer()
+    bug = _StarDistributionSerializer()
+
+
+class RoomRatingStatsResponseSerializer(serializers.Serializer):
+    reviews_count = serializers.IntegerField()
+    averages = _CategoryAveragesSerializer()
+    distributions = _CategoryDistributionsSerializer()
 
 
