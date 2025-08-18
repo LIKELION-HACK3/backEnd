@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Room, RoomImage, Review
-from .serializers import RoomSerializer, ReviewSerializer, RoomStatsResponseSerializer, RoomSearchResponseSerializer, ImportRoomsResponseSerializer, RoomRatingStatsResponseSerializer
+from .serializers import RoomSerializer, ReviewSerializer, RoomStatsResponseSerializer, RoomSearchResponseSerializer, ImportRoomsResponseSerializer, RoomRatingStatsResponseSerializer, ReviewListItemSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 @extend_schema(
@@ -513,9 +513,10 @@ class ReviewListCreateView(generics.ListCreateAPIView):
 @extend_schema(
     tags=['rooms'],
     summary='방 리뷰 별점 통계',
-    description='특정 방의 카테고리별 평균/분포 및 전체 평균을 제공합니다. 피그마 카테고리(채광/방음/벌레/보안/교통)에 맞춰 반환합니다.',
+    description='특정 방의 카테고리별 평균/분포 및 전체 평균과 최신 리뷰 목록을 제공합니다. 피그마 카테고리(채광/방음/벌레/보안/교통)에 맞춰 반환합니다. `limit` 쿼리로 리뷰 개수 조절 가능(기본 10).',
     parameters=[
         OpenApiParameter(name='room_id', description='방 ID', required=True, type=int),
+        OpenApiParameter(name='limit', description='포함할 최신 리뷰 개수', required=False, type=int, default=10),
     ],
     responses={
         200: OpenApiResponse(
@@ -540,7 +541,21 @@ class ReviewListCreateView(generics.ListCreateAPIView):
                             'light': {'_1': 0, '_2': 0, '_3': 2, '_4': 3, '_5': 2},
                             'traffic': {'_1': 1, '_2': 1, '_3': 3, '_4': 1, '_5': 1},
                             'bug': {'_1': 0, '_2': 0, '_3': 1, '_4': 1, '_5': 5}
-                        }
+                        },
+                        'reviews': [
+                            {
+                                'id': 11,
+                                'username': 'ammsgdi1254',
+                                'content': '채광 좋고 벌레 거의 없어요.',
+                                'created_at': '2025-08-12T10:11:22Z',
+                                'rating_safety': 4,
+                                'rating_noise': 3,
+                                'rating_light': 5,
+                                'rating_traffic': 4,
+                                'rating_clean': 5,
+                                'rating_bug': 5
+                            }
+                        ]
                     },
                     response_only=True,
                     status_codes=['200']
@@ -553,7 +568,11 @@ class RoomRatingStatsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, room_id: int):
-        qs = Review.objects.filter(room_id=room_id)
+        qs = Review.objects.filter(room_id=room_id).select_related('user')
+        try:
+            limit = int(request.query_params.get('limit', 10))
+        except ValueError:
+            limit = 10
 
         def avg_or_none(values):
             values = [v for v in values if v is not None]
@@ -599,7 +618,8 @@ class RoomRatingStatsView(APIView):
                 'light': dist(light_vals),
                 'traffic': dist(traffic_vals),
                 'bug': dist(bug_vals),
-            }
+            },
+            'reviews': ReviewListItemSerializer(qs.order_by('-created_at', '-id')[:limit], many=True).data,
         }
 
         serializer = RoomRatingStatsResponseSerializer(data)
