@@ -103,6 +103,18 @@ class ImportRoomsResponseSerializer(serializers.Serializer):
 
 
 # ----- 리뷰 평점 통계 응답 -----
+class ReviewListItemSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    rating_bug = serializers.IntegerField(source='rating_clean', required=False, allow_null=True)
+
+    class Meta:
+        model = Review
+        fields = (
+            'id', 'username', 'content', 'created_at',
+            'rating_safety', 'rating_noise', 'rating_light', 'rating_traffic', 'rating_clean', 'rating_bug'
+        )
+        read_only_fields = fields
+
 class _CategoryAveragesSerializer(serializers.Serializer):
     safety = serializers.FloatField(allow_null=True)
     noise = serializers.FloatField(allow_null=True)
@@ -133,5 +145,6 @@ class RoomRatingStatsResponseSerializer(serializers.Serializer):
     reviews_count = serializers.IntegerField()
     averages = _CategoryAveragesSerializer()
     distributions = _CategoryDistributionsSerializer()
+    reviews = ReviewListItemSerializer(many=True)
 
 
