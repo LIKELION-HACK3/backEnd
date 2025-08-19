@@ -1,6 +1,7 @@
 from django.urls import path
-from . import views 
+from .views import NewsArticleListView
 
-urlpatterns=[
-  
+urlpatterns = [
+    path("news/", NewsArticleListView.as_view(), name="news_list"),
 ]
+

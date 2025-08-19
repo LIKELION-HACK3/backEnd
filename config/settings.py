@@ -43,6 +43,7 @@ _allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '').strip()
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else []
 
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -54,13 +55,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'django_filters',
     'corsheaders',
     'drf_spectacular',  # Swagger 문서 생성
     'users',
     'rooms',
     'bookmarks',
     'ai',
-    # 'community',  # 임시로 비활성화 (팀원 파트)
+    'community',  
 ]
 
 MIDDLEWARE = [
