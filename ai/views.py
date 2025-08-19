@@ -1,6 +1,6 @@
 import json
 import os
-import openai
+from openai import OpenAI
 from django.conf import settings
 from django.db import transaction
 from rest_framework import status
@@ -233,17 +233,19 @@ class AIComparisonView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        # 결과 저장
+        # 결과 저장 (기존 리포트가 있으면 업데이트, 없으면 새로 생성)
         with transaction.atomic():
-            report = AIComparisonReport.objects.create(
+            report, created = AIComparisonReport.objects.update_or_create(
                 user=request.user,
                 room_a=room_a,
                 room_b=room_b,
-                comparison_criteria=comparison_criteria,
-                analysis_summary=analysis_result['summary'],
-                detailed_comparison=analysis_result['detailed_comparison'],
-                recommendation=analysis_result['recommendation'],
-                reasoning=analysis_result['reasoning']
+                defaults={
+                    'comparison_criteria': comparison_criteria,
+                    'analysis_summary': analysis_result['summary'],
+                    'detailed_comparison': analysis_result['detailed_comparison'],
+                    'recommendation': analysis_result['recommendation'],
+                    'reasoning': analysis_result['reasoning']
+                }
             )
         
         return Response(
@@ -263,9 +265,9 @@ class AIComparisonView(APIView):
     
     def _analyze_with_ai(self, room_a, room_b, comparison_criteria, user_preferences, real_estate_data):
         """OpenAI GPT를 사용하여 방 비교 분석"""
-        # OpenAI API 키 설정
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-        if not openai.api_key:
+        # OpenAI API 키 설정 (SDK v1.x)
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
             raise Exception("OpenAI API 키가 설정되지 않았습니다.")
         
         # 프롬프트 구성
@@ -274,22 +276,17 @@ class AIComparisonView(APIView):
         )
         
         try:
-            response = openai.ChatCompletion.create(
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "당신은 부동산 전문가입니다. 두 개의 방을 객관적으로 비교 분석하고, 사용자의 선호사항을 고려하여 더 나은 선택을 추천해주세요."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    {"role": "system", "content": "당신은 부동산 전문가입니다. 두 개의 방을 객관적으로 비교 분석하고, 사용자의 선호사항을 고려하여 더 나은 선택을 추천해주세요."},
+                    {"role": "user", "content": prompt}
                 ],
                 max_tokens=1000,
-                temperature=0.7
+                temperature=0.7,
             )
-            
+
             ai_response = response.choices[0].message.content
             
             # AI 응답을 구조화된 형태로 파싱
