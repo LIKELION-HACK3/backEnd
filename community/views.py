@@ -1,9 +1,23 @@
-from rest_framework import generics, filters
+from rest_framework import generics, filters, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.db.models import F
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
-from .models import NewsArticle
-from .serializers import NewsArticleSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
+from .models import (
+    NewsArticle,CommunityPost, Comment,
+    PostLike, CommentLike, PostReport, CommentReport,
+    Region,Category
+    )
+from .serializers import (
+    NewsArticleSerializer,PostListSerializer, PostDetailSerializer, PostCreateUpdateSerializer,
+    CommentSerializer, CommentCreateSerializer, PostLikeSerializer, CommentLikeSerializer,
+    PostReportSerializer, CommentReportSerializer,
+    )
 
 @extend_schema(
     tags=['community'],
@@ -82,4 +96,104 @@ class NewsArticleListView(generics.ListAPIView):
         if category:
             qs = qs.filter(category=category)  
         return qs
+
+class PostListView(generics.ListCreateAPIView):
+    queryset = CommunityPost.objects.all().select_related("author").order_by("-created_at")
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return PostCreateUpdateSerializer
+        return PostListSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
+class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = CommunityPost.objects.all().select_related("author")
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return PostCreateUpdateSerializer
+        return PostDetailSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        obj = self.get_object()
+        CommunityPost.objects.filter(pk=obj.pk).update(views=F("views") + 1)
+        obj.refresh_from_db()
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
+
+
+class CommentListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        post_id = self.kwargs["post_id"]
+        return Comment.objects.filter(post_id=post_id, parent__isnull=True).select_related("author").order_by("created_at")
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CommentCreateSerializer
+        return CommentSerializer
+
+    def perform_create(self, serializer):
+        post = get_object_or_404(CommunityPost, pk=self.kwargs["post_id"])
+        serializer.save(author=self.request.user, post=post)
+
+class PostLikeToggleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, post_id):
+        post = get_object_or_404(CommunityPost, pk=post_id)
+        like = PostLike.objects.filter(user=request.user, post=post).first()
+
+        if like:
+            like.delete()
+            CommunityPost.objects.filter(pk=post.pk).update(like_count=F("like_count") - 1)
+            post.refresh_from_db(fields=["like_count"])
+            return Response({"liked": False, "like_count": post.like_count}, status=status.HTTP_200_OK)
+
+        PostLike.objects.create(user=request.user, post=post)
+        CommunityPost.objects.filter(pk=post.pk).update(like_count=F("like_count") + 1)
+        post.refresh_from_db(fields=["like_count"])
+        return Response({"liked": True, "like_count": post.like_count}, status=status.HTTP_200_OK)
+
+class CommentLikeToggleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, comment_id):
+        comment = get_object_or_404(Comment, pk=comment_id)
+        like = CommentLike.objects.filter(user=request.user, comment=comment).first()
+
+        if like:
+            like.delete()
+            liked = False
+        else:
+            CommentLike.objects.create(user=request.user, comment=comment)
+            liked = True
+
+        count = CommentLike.objects.filter(comment=comment).count()
+        return Response({"liked": liked, "count": count}, status=status.HTTP_200_OK)
+
+
+class PostReportView(generics.CreateAPIView):
+    serializer_class = PostReportSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        post = get_object_or_404(CommunityPost, pk=self.kwargs["post_id"])
+        serializer.save(user=self.request.user, post=post)
+
+
+class CommentReportView(generics.CreateAPIView):
+    serializer_class = CommentReportSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        comment = get_object_or_404(Comment, pk=self.kwargs["comment_id"])
+        serializer.save(user=self.request.user, comment=comment)
+
 
