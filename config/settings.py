@@ -37,11 +37,11 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
-#DEBUG=True
+
 # Comma-separated list, e.g. ".cloudtype.app,localhost,127.0.0.1"
 _allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '').strip()
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else []
-#ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
 
 
 
