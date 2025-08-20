@@ -7,7 +7,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 from .models import (
     NewsArticle,CommunityPost, Comment,
     PostLike, CommentLike, PostReport, CommentReport,
@@ -97,6 +97,20 @@ class NewsArticleListView(generics.ListAPIView):
             qs = qs.filter(category=category)  
         return qs
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['community'],
+        summary='커뮤니티 게시글 목록',
+        description='커뮤니티 게시글을 최신순으로 조회합니다.',
+        responses=PostListSerializer(many=True),
+    ),
+    post=extend_schema(
+        tags=['community'],
+        summary='커뮤니티 게시글 생성',
+        request=PostCreateUpdateSerializer,
+        responses=PostDetailSerializer,
+    ),
+)
 class PostListView(generics.ListCreateAPIView):
     queryset = CommunityPost.objects.all().select_related("author").order_by("-created_at")
     permission_classes = [IsAuthenticated]
@@ -110,6 +124,30 @@ class PostListView(generics.ListCreateAPIView):
         serializer.save(author=self.request.user)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['community'],
+        summary='게시글 상세',
+        responses=PostDetailSerializer,
+    ),
+    put=extend_schema(
+        tags=['community'],
+        summary='게시글 전체 수정',
+        request=PostCreateUpdateSerializer,
+        responses=PostDetailSerializer,
+    ),
+    patch=extend_schema(
+        tags=['community'],
+        summary='게시글 일부 수정',
+        request=PostCreateUpdateSerializer,
+        responses=PostDetailSerializer,
+    ),
+    delete=extend_schema(
+        tags=['community'],
+        summary='게시글 삭제',
+        responses={204: OpenApiResponse(description='삭제 성공')},
+    ),
+)
 class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CommunityPost.objects.all().select_related("author")
     permission_classes = [IsAuthenticated]
@@ -127,6 +165,20 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['community'],
+        summary='댓글 목록',
+        description='특정 게시글의 최상위 댓글 목록을 생성시간 오름차순으로 조회합니다.',
+        responses=CommentSerializer(many=True),
+    ),
+    post=extend_schema(
+        tags=['community'],
+        summary='댓글 작성',
+        request=CommentCreateSerializer,
+        responses=CommentSerializer,
+    ),
+)
 class CommentListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -146,6 +198,12 @@ class CommentListCreateView(generics.ListCreateAPIView):
 class PostLikeToggleView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['community'],
+        summary='게시글 좋아요 토글',
+        description='좋아요가 없으면 생성, 있으면 취소합니다.',
+        responses={200: OpenApiResponse(description='토글 결과')},
+    )
     def post(self, request, post_id):
         post = get_object_or_404(CommunityPost, pk=post_id)
         like = PostLike.objects.filter(user=request.user, post=post).first()
@@ -164,6 +222,12 @@ class PostLikeToggleView(APIView):
 class CommentLikeToggleView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['community'],
+        summary='댓글 좋아요 토글',
+        description='좋아요가 없으면 생성, 있으면 취소합니다.',
+        responses={200: OpenApiResponse(description='토글 결과')},
+    )
     def post(self, request, comment_id):
         comment = get_object_or_404(Comment, pk=comment_id)
         like = CommentLike.objects.filter(user=request.user, comment=comment).first()
@@ -179,6 +243,12 @@ class CommentLikeToggleView(APIView):
         return Response({"liked": liked, "count": count}, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=['community'],
+    summary='게시글 신고',
+    request=PostReportSerializer,
+    responses=PostReportSerializer,
+)
 class PostReportView(generics.CreateAPIView):
     serializer_class = PostReportSerializer
     permission_classes = [IsAuthenticated]
@@ -188,6 +258,12 @@ class PostReportView(generics.CreateAPIView):
         serializer.save(user=self.request.user, post=post)
 
 
+@extend_schema(
+    tags=['community'],
+    summary='댓글 신고',
+    request=CommentReportSerializer,
+    responses=CommentReportSerializer,
+)
 class CommentReportView(generics.CreateAPIView):
     serializer_class = CommentReportSerializer
     permission_classes = [IsAuthenticated]
