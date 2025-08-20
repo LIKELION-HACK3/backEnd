@@ -37,12 +37,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-#DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
-DEBUG=True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 # Comma-separated list, e.g. ".cloudtype.app,localhost,127.0.0.1"
 _allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '').strip()
-#ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else []
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else ['localhost', '127.0.0.1']
 
 # BACKEND_BASE_URL에서 호스트 자동 추가 (환경변수 오입력 시 보완)
 _backend_base_url = os.getenv('BACKEND_BASE_URL', '').strip()
