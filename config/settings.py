@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 import os 
 from dotenv import load_dotenv
@@ -41,6 +42,17 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 # Comma-separated list, e.g. ".cloudtype.app,localhost,127.0.0.1"
 _allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '').strip()
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else []
+
+# BACKEND_BASE_URL에서 호스트 자동 추가 (환경변수 오입력 시 보완)
+_backend_base_url = os.getenv('BACKEND_BASE_URL', '').strip()
+if _backend_base_url:
+    try:
+        parsed = urlparse(_backend_base_url if '://' in _backend_base_url else f'https://{_backend_base_url}')
+        _host = parsed.hostname
+        if _host and _host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_host)
+    except Exception:
+        pass
 
 
 
