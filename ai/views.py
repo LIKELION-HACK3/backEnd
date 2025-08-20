@@ -320,7 +320,7 @@ class AIComparisonView(APIView):
 - 면적: 공급 {room_b.supply_area}㎡, 전용 {room_b.real_area}㎡
 - 층수: {room_b.floor or 'N/A'}
 - 주소: {room_b.address or 'N/A'}
-- 위치: 위도 {room_b.longitude}, 경도 {room_b.longitude}
+- 위치: 위도 {room_b.latitude}, 경도 {room_b.longitude}
 """
         
         # 비교 기준
@@ -364,44 +364,96 @@ class AIComparisonView(APIView):
     def _parse_ai_response(self, ai_response, room_a, room_b):
         """AI 응답을 구조화된 형태로 파싱"""
         try:
-            # 간단한 파싱 (실제로는 더 정교한 파싱 필요)
-            lines = ai_response.split('\n')
+            text = ai_response.strip()
+            # 코드펜스 안의 JSON만 골라내기 시도
+            if text.startswith('```'):
+                first = text.find('```')
+                last = text.rfind('```')
+                if last > first:
+                    candidate = text[first + 3:last].strip()
+                    # 언어 태그 제거 (예: json) 후 다시 trim
+                    candidate = candidate.split('\n', 1)[-1].strip() if '\n' in candidate else candidate
+                    try:
+                        data = json.loads(candidate)
+                        return {
+                            'summary': data.get('summary') or "AI 분석 완료",
+                            'detailed_comparison': data.get('detailed_comparison') or {},
+                            'recommendation': data.get('recommendation') or 'room_a',
+                            'reasoning': data.get('reasoning') or "종합적인 분석 결과",
+                        }
+                    except Exception:
+                        pass
+
+            # 순수 JSON이면 바로 파싱
+            try:
+                data = json.loads(text)
+                return {
+                    'summary': data.get('summary') or "AI 분석 완료",
+                    'detailed_comparison': data.get('detailed_comparison') or {},
+                    'recommendation': data.get('recommendation') or 'room_a',
+                    'reasoning': data.get('reasoning') or "종합적인 분석 결과",
+                }
+            except Exception:
+                pass
+
+            # 라인 기반 파싱 (여러 줄 상세비교 수집, '상세 비교:' 변형 허용)
+            lines = text.split('\n')
             summary = ""
-            detailed_comparison = {}
+            detailed_lines = []
             recommendation = ""
             reasoning = ""
-            
-            for line in lines:
-                line = line.strip()
+            in_detail = False
+
+            for raw in lines:
+                line = raw.strip()
                 if line.startswith('요약:'):
-                    summary = line.replace('요약:', '').strip()
-                elif line.startswith('상세비교:'):
-                    detailed_comparison['comparison'] = line.replace('상세비교:', '').strip()
-                elif line.startswith('추천:'):
-                    rec = line.replace('추천:', '').strip().lower()
+                    summary = line.split(':', 1)[-1].strip()
+                    in_detail = False
+                    continue
+                if line.startswith('상세비교:') or line.startswith('상세 비교:'):
+                    # 같은 줄의 내용 포함
+                    after = line.split(':', 1)[-1].strip()
+                    if after:
+                        detailed_lines.append(after)
+                    in_detail = True
+                    continue
+                if line.startswith('추천:'):
+                    rec = line.split(':', 1)[-1].strip().lower()
                     if 'room_a' in rec or '방 a' in rec:
                         recommendation = 'room_a'
                     elif 'room_b' in rec or '방 b' in rec:
                         recommendation = 'room_b'
                     else:
-                        recommendation = 'room_a'  # 기본값
-                elif line.startswith('이유:'):
-                    reasoning = line.replace('이유:', '').strip()
-            
+                        recommendation = 'room_a'
+                    in_detail = False
+                    continue
+                if line.startswith('이유:'):
+                    reasoning = line.split(':', 1)[-1].strip()
+                    in_detail = False
+                    continue
+
+                # 상세비교 섹션 내부의 추가 줄들 누적
+                if in_detail and line:
+                    detailed_lines.append(line)
+
+            detailed_comparison = {
+                'comparison': '\n'.join(detailed_lines).strip()
+            } if detailed_lines else {}
+
             return {
                 'summary': summary or "AI 분석 완료",
                 'detailed_comparison': detailed_comparison,
                 'recommendation': recommendation or 'room_a',
-                'reasoning': reasoning or "종합적인 분석 결과"
+                'reasoning': reasoning or "종합적인 분석 결과",
             }
-            
+
         except Exception:
             # 파싱 실패 시 기본값 반환
             return {
                 'summary': ai_response[:200] + "..." if len(ai_response) > 200 else ai_response,
                 'detailed_comparison': {'raw_response': ai_response},
                 'recommendation': 'room_a',
-                'reasoning': "AI 분석 결과"
+                'reasoning': "AI 분석 결과",
             }
 
 @extend_schema(
