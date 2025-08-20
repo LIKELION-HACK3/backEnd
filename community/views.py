@@ -67,6 +67,8 @@ from .serializers import (
     }
 )
 class NewsArticleListView(generics.ListAPIView):
+    permission_classes=[AllowAny]
+    
     serializer_class = NewsArticleSerializer
     queryset = NewsArticle.objects.select_related("source").all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -101,6 +103,11 @@ class PostListView(generics.ListCreateAPIView):
     queryset = CommunityPost.objects.all().select_related("author").order_by("-created_at")
     permission_classes = [IsAuthenticated]
     
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
     def get_serializer_class(self):
         if self.request.method == "POST":
             return PostCreateUpdateSerializer
@@ -113,6 +120,11 @@ class PostListView(generics.ListCreateAPIView):
 class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CommunityPost.objects.all().select_related("author")
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
     def get_serializer_class(self):
         if self.request.method in ["PUT", "PATCH"]:
@@ -129,6 +141,11 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class CommentListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         post_id = self.kwargs["post_id"]
