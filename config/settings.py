@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from urllib.parse import urlparse
+from decouple import config
 
 import os 
 from dotenv import load_dotenv
@@ -34,20 +35,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = False
 
 
 # Comma-separated list, e.g. ".cloudtype.app,localhost,127.0.0.1"
 _allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '').strip()
-ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else []
-
-
-# Comma-separated list, e.g. ".cloudtype.app,localhost,127.0.0.1"
-_allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '').strip()
-ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] if _allowed_hosts_env else ['127.0.0.1', '13.125.198.154', 'uniroom.store']
 
 # BACKEND_BASE_URL에서 호스트 자동 추가 (환경변수 오입력 시 보완)
 _backend_base_url = os.getenv('BACKEND_BASE_URL', '').strip()
@@ -139,12 +135,15 @@ if DB_ENGINE == 'mysql':
     }
 else:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('DB_NAME'), # DB(스키마) 이름
+        'USER': config('DB_USER'), # 유저 이름 (root)
+        'PASSWORD': config('DB_PASSWORD'), # DB 비밀번호
+        'HOST': config('DB_HOST'), # DB 엔드포인트
+        'PORT': 3306,
     }
-
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -255,3 +254,8 @@ SPECTACULAR_SETTINGS = {
         {'name': 'community', 'description': '커뮤니티 기능'},
     ],
 }
+
+try: 
+    from .local_settings import *
+except ImportError:
+    pass 
