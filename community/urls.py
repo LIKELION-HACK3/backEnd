@@ -4,7 +4,7 @@ from .views import (
     PostListView, PostDetailView,
     CommentListCreateView,
     PostLikeToggleView, CommentLikeToggleView,
-    PostReportView, CommentReportView,
+    PostReportView, CommentReportView, CommentDeleteView,
 )
 
 app_name = "community"
@@ -18,5 +18,6 @@ urlpatterns = [
     path("comments/<int:comment_id>/like/", CommentLikeToggleView.as_view(), name="comment_like_toggle"),
     path("posts/<int:post_id>/report/", PostReportView.as_view(), name="post_report"),
     path("comments/<int:comment_id>/report/", CommentReportView.as_view(), name="comment_report"),
+    path("comments/<int:comment_id>/", CommentDeleteView.as_view(), name="comment_delete"),
 ]
 
