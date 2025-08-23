@@ -290,3 +290,38 @@ class CommentReportView(generics.CreateAPIView):
         serializer.save(user=self.request.user, comment=comment)
 
 
+
+@extend_schema(
+    tags=['community'],
+    summary='댓글/대댓글 삭제',
+    responses={204: OpenApiResponse(description='삭제 성공')},
+)
+class CommentDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, comment_id):
+        comment = get_object_or_404(Comment, pk=comment_id)
+
+        # 작성자 또는 관리자 권한 확인
+        if request.user != comment.author and not request.user.is_staff:
+            return Response({"detail": "삭제 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        post = comment.post
+
+        # 하위 대댓글까지 포함된 총 삭제 개수 계산
+        def count_descendants(node):
+            total = 1
+            for child in node.replies.all():
+                total += count_descendants(child)
+            return total
+
+        to_delete_count = count_descendants(comment)
+
+        with transaction.atomic():
+            comment.delete()  # CASCADE로 대댓글 포함 삭제
+            CommunityPost.objects.filter(pk=post.pk).update(
+                comment_count=F("comment_count") - to_delete_count
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
