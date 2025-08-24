@@ -4,10 +4,8 @@ ENV PYTHONUNBUFFERED 1
 
 #RUN apt-get -y update
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc pkg-config default-libmysqlclient-dev libpq-dev \
+    build-essential gcc pkg-config default-libmysqlclient-dev vim \
  && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get -y install vim
 
 RUN mkdir /app
 ADD . /app
