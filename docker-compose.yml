@@ -5,7 +5,7 @@ services:
     container_name: web
     command: bash -c "gunicorn backEnd.wsgi:application -b 0.0.0.0:8000" # 서버 실행
     ports:
-      - "8080:8000"
+      - "8000:8000"
     restart: always
     volumes:
       - .:/app
@@ -23,7 +23,7 @@ services:
       - ./media:/media # media가 있으면
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "443:443"
     depends_on:
       - web
     networks:
