@@ -3,7 +3,7 @@ services:
   web:
     build: .
     container_name: web
-    command: bash -c "gunicorn BACKEND.wsgi:application -b 0.0.0.0:8000" # 서버 실행
+    command: bash -c "gunicorn backEnd.wsgi:application -b 0.0.0.0:8000" # 서버 실행
     ports:
       - "8000:8000"
     restart: always
