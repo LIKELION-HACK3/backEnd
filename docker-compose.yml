@@ -1,7 +1,7 @@
 version: '3'
 services:
   web:
-    image: server
+    build: .
     container_name: web
     command: bash -c "gunicorn backEnd.wsgi:application -b 0.0.0.0:8000" # 서버 실행
     ports:
