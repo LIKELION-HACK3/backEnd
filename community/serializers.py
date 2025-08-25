@@ -172,3 +172,6 @@ class NotificationSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "id", "type", "message", "actor", "post", "comment", "is_read", "created_at"
         )
+
+class NotificationMarkReadSerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=False)

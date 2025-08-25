@@ -16,7 +16,7 @@ from .models import (
 from .serializers import (
     NewsArticleSerializer,PostListSerializer, PostDetailSerializer, PostCreateUpdateSerializer,
     CommentSerializer, CommentCreateSerializer, PostLikeSerializer, CommentLikeSerializer,
-    PostReportSerializer, CommentReportSerializer, NotificationSerializer,
+    PostReportSerializer, CommentReportSerializer, NotificationSerializer, NotificationMarkReadSerializer,
     )
 
 @extend_schema(
@@ -371,13 +371,16 @@ class NotificationUnreadListView(generics.ListAPIView):
 @extend_schema(
     tags=['community'],
     summary='알림 읽음 처리',
+    request=NotificationMarkReadSerializer,
     responses={200: OpenApiResponse(description='읽음 처리 완료')},
 )
 class NotificationMarkReadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        notification_ids = request.data.get("ids", [])
+        serializer = NotificationMarkReadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        notification_ids = serializer.validated_data["ids"]
         qs = Notification.objects.filter(recipient=request.user, id__in=notification_ids)
         updated = qs.update(is_read=True)
         return Response({"updated": updated}, status=status.HTTP_200_OK)
