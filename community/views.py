@@ -11,12 +11,12 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 from .models import (
     NewsArticle,CommunityPost, Comment,
     PostLike, CommentLike, PostReport, CommentReport,
-    Region,Category
+    Region,Category, Notification, NotificationType
     )
 from .serializers import (
     NewsArticleSerializer,PostListSerializer, PostDetailSerializer, PostCreateUpdateSerializer,
     CommentSerializer, CommentCreateSerializer, PostLikeSerializer, CommentLikeSerializer,
-    PostReportSerializer, CommentReportSerializer,
+    PostReportSerializer, CommentReportSerializer, NotificationSerializer,
     )
 
 @extend_schema(
@@ -208,9 +208,36 @@ class CommentListCreateView(generics.ListCreateAPIView):
             return CommentCreateSerializer
         return CommentSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.method == "POST":
+            context["post"] = get_object_or_404(CommunityPost, pk=self.kwargs["post_id"]) 
+        return context
+
     def perform_create(self, serializer):
         post = get_object_or_404(CommunityPost, pk=self.kwargs["post_id"])
-        serializer.save(author=self.request.user, post=post)
+        comment = serializer.save(author=self.request.user, post=post)
+
+        # 알림 생성: 게시글 작성자에게 (본인 댓글은 제외)
+        if post.author_id != self.request.user.id and comment.parent is None:
+            Notification.objects.create(
+                recipient=post.author,
+                actor=self.request.user,
+                type=NotificationType.COMMENT_ON_POST,
+                post=post,
+                comment=comment,
+                message=f"'{post.title}'에 새 댓글이 달렸습니다.",
+            )
+        # 알림 생성: 대댓글인 경우 원댓글 작성자에게 (본인 제외)
+        if comment.parent is not None and comment.parent.author_id != self.request.user.id:
+            Notification.objects.create(
+                recipient=comment.parent.author,
+                actor=self.request.user,
+                type=NotificationType.REPLY_ON_COMMENT,
+                post=post,
+                comment=comment,
+                message="내 댓글에 대댓글이 달렸습니다.",
+            )
 
 class PostLikeToggleView(APIView):
     permission_classes = [IsAuthenticated]
@@ -324,4 +351,34 @@ class CommentDeleteView(APIView):
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=['community'],
+        summary='읽지 않은 알림 목록',
+        responses=NotificationSerializer(many=True),
+    ),
+)
+class NotificationUnreadListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = NotificationSerializer
+
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user, is_read=False).select_related("actor").order_by("-created_at")
+
+
+@extend_schema(
+    tags=['community'],
+    summary='알림 읽음 처리',
+    responses={200: OpenApiResponse(description='읽음 처리 완료')},
+)
+class NotificationMarkReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        notification_ids = request.data.get("ids", [])
+        qs = Notification.objects.filter(recipient=request.user, id__in=notification_ids)
+        updated = qs.update(is_read=True)
+        return Response({"updated": updated}, status=status.HTTP_200_OK)
 

@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     NewsSource, NewsArticle,
     CommunityPost, PostLike, PostReport,
-    Comment, CommentLike, CommentReport,
+    Comment, CommentLike, CommentReport, Notification,
     )
 
 User=get_user_model()
@@ -159,4 +159,16 @@ class CommentReportSerializer(serializers.ModelSerializer):
         request=self.context.get("request")
         validated_data["user"]=request.user
         return super().create(validated_data)
-    
+
+#=== 알림 ===
+class NotificationSerializer(serializers.ModelSerializer):
+    actor = UserTinySerializer(read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = (
+            "id", "type", "message", "actor", "post", "comment", "is_read", "created_at"
+        )
+        read_only_fields = (
+            "id", "type", "message", "actor", "post", "comment", "is_read", "created_at"
+        )

@@ -144,3 +144,24 @@ class CommentReport(models.Model):
 
   class Meta:
     indexes=[models.Index(fields=["comment", "created_at"])]
+
+#=== 알림 ===
+class NotificationType(models.TextChoices):
+  COMMENT_ON_POST="comment_post", "게시글에 새로운 댓글"
+  REPLY_ON_COMMENT="reply_comment", "내 댓글에 대댓글"
+
+class Notification(models.Model):
+  recipient=models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+  actor=models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="notification_actors")
+  type=models.CharField(max_length=20, choices=NotificationType.choices)
+  post=models.ForeignKey(CommunityPost, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
+  comment=models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
+  message=models.CharField(max_length=255, blank=True)
+  is_read=models.BooleanField(default=False, db_index=True)
+  created_at=models.DateTimeField(auto_now_add=True, db_index=True)
+
+  class Meta:
+    indexes=[
+      models.Index(fields=["recipient", "is_read", "-created_at"]),
+    ]
+    ordering=["-created_at", "-id"]
