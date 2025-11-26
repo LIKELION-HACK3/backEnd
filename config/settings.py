@@ -122,7 +122,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
 
-if DB_ENGINE == 'mysql':
+if DB_ENGINE == 'postgresql':
+    # Supabase PostgreSQL
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(
+            os.getenv('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+elif DB_ENGINE == 'mysql':
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',

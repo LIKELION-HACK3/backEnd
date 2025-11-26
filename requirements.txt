@@ -12,7 +12,8 @@ whitenoise==6.7.0
 gunicorn==21.2.0
 setuptools
 wheel
-PyMySQL==1.1.1
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0
 openai>=1.31.0,<2
 drf-spectacular==0.27.1
 feedparser==6.0.11
