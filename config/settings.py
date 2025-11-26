@@ -125,12 +125,23 @@ DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
 if DB_ENGINE == 'postgresql':
     # Supabase PostgreSQL
     import dj_database_url
+    
+    # CloudType/Supabase 등에서 pgbouncer=true 옵션이 붙어오는 경우 제거 (psycopg2 호환성 문제)
+    if 'DATABASE_URL' in os.environ:
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        
+        url = os.environ['DATABASE_URL']
+        parsed = urlparse(url)
+        # pgbouncer 파라미터가 있으면 제거
+        if 'pgbouncer' in parsed.query:
+            qs = parse_qs(parsed.query)
+            qs.pop('pgbouncer', None)
+            new_query = urlencode(qs, doseq=True)
+            parsed = parsed._replace(query=new_query)
+            os.environ['DATABASE_URL'] = urlunparse(parsed)
+
     DATABASES = {
-        'default': dj_database_url.parse(
-            os.getenv('DATABASE_URL'),
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
+        'default': dj_database_url.config(conn_max_age=600)
     }
 elif DB_ENGINE == 'mysql':
     DATABASES = {
